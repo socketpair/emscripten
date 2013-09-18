@@ -6,7 +6,8 @@ from subprocess import Popen, PIPE, STDOUT
 # instead of stdout in cases where stdout is reserved for other use, or muted via a PIPEd process call.
 def logmsg(str):
   print >> sys.stderr, str
-  sys.stderr.flush()
+  if os.name == 'nt':
+    sys.stderr.flush()
 
 TRACK_PROCESS_SPAWNS = True if (os.getenv('EM_BUILD_VERBOSE') and int(os.getenv('EM_BUILD_VERBOSE')) >= 3) else False
 
