@@ -13,12 +13,7 @@ import os, sys, json, optparse, subprocess, re, time, multiprocessing, string
 
 from tools import jsrun, cache as cache_module, tempfiles
 from tools.response_file import read_response_file
-
-# Logs a message to stderr, forcing a flush afterwards to have all messages immediately show up on the console.
-# Note that stderr is used from this file for all logging, not just for errors. 
-def logmsg(str):
-  print >> sys.stderr, str
-  sys.stderr.flush()
+from tools.jsrun import logmsg
 
 __rootpath__ = os.path.abspath(os.path.dirname(__file__))
 def path_from_root(*pathelems):
