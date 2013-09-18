@@ -14,6 +14,12 @@ import os, sys, json, optparse, subprocess, re, time, multiprocessing, string
 from tools import jsrun, cache as cache_module, tempfiles
 from tools.response_file import read_response_file
 
+# Logs a message to stderr, forcing a flush afterwards to have all messages immediately show up on the console.
+# Note that stderr is used from this file for all logging, not just for errors. 
+def logmsg(str):
+  print >> sys.stderr, str
+  sys.stderr.flush()
+
 __rootpath__ = os.path.abspath(os.path.dirname(__file__))
 def path_from_root(*pathelems):
   """Returns the absolute path for which the given path elements are
@@ -46,7 +52,7 @@ MAX_CHUNK_SIZE = float(os.environ.get('EMSCRIPT_MAX_CHUNK_SIZE') or 'inf') # con
 STDERR_FILE = os.environ.get('EMCC_STDERR_FILE')
 if STDERR_FILE:
   STDERR_FILE = os.path.abspath(STDERR_FILE)
-  print >> sys.stderr, 'logging stderr in js compiler phase into %s' % STDERR_FILE
+  logmsg('logging stderr in js compiler phase into %s' % STDERR_FILE)
   STDERR_FILE = open(STDERR_FILE, 'w')
 
 def process_funcs((i, funcs, meta, settings_file, compiler, forwarded_file, libraries, compiler_engine, temp_files, DEBUG)):
@@ -70,7 +76,7 @@ def process_funcs((i, funcs, meta, settings_file, compiler, forwarded_file, libr
     raise Exception()
   finally:
     tempfiles.try_delete(funcs_file)
-  if DEBUG: print >> sys.stderr, '.'
+  if DEBUG: logmsg('.')
   return out
 
 def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
@@ -91,7 +97,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   #   2 aka 'funcs': Process functions. We can parallelize this, working on each function independently.
   #   3 aka 'post' : Process globals, generate postamble and finishing touches.
 
-  if DEBUG: print >> sys.stderr, 'emscript: ll=>js'
+  if DEBUG: logmsg('emscript: ll=>js')
 
   if jcache: jcache.ensure()
 
@@ -101,7 +107,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   scan(ll, settings)
   total_ll_size = len(ll)
   ll = None # allow collection
-  if DEBUG: print >> sys.stderr, '  emscript: scan took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: scan took %s seconds' % (time.time() - t))
 
   # Split input into the relevant parts for each phase
   pre = []
@@ -136,19 +142,19 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
         pre.append(line) # pre needs it so we know about globals in pre and funcs. So emit globals there
   ll_lines = None
   meta = ''.join(meta)
-  if DEBUG and len(meta) > 1024*1024: print >> sys.stderr, 'emscript warning: large amounts of metadata, will slow things down'
-  if DEBUG: print >> sys.stderr, '  emscript: split took %s seconds' % (time.time() - t)
+  if DEBUG and len(meta) > 1024*1024: logmsg('emscript warning: large amounts of metadata, will slow things down')
+  if DEBUG: logmsg('  emscript: split took %s seconds' % (time.time() - t))
 
   if len(funcs) == 0:
-    print >> sys.stderr, 'No functions to process. Make sure you prevented LLVM from eliminating them as dead (use EXPORTED_FUNCTIONS if necessary, see the FAQ)'
+    logmsg('No functions to process. Make sure you prevented LLVM from eliminating them as dead (use EXPORTED_FUNCTIONS if necessary, see the FAQ)')
 
   #if DEBUG:
-  #  print >> sys.stderr, '========= pre ================\n'
-  #  print >> sys.stderr, ''.join(pre)
-  #  print >> sys.stderr, '========== funcs ===============\n'
+  #  logmsg('========= pre ================\n')
+  #  logmsg(''.join(pre))
+  #  logmsg('========== funcs ===============\n')
   #  for func in funcs:
-  #    print >> sys.stderr, '\n// ===\n\n', ''.join(func)
-  #  print >> sys.stderr, '=========================\n'
+  #    logmsg('\n// ===\n\n', ''.join(func))
+  #  logmsg('=========================\n')
 
   # Save settings to a file to work around v8 issue 1579
   settings_file = temp_files.get('.txt').name
@@ -168,7 +174,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   if jcache:
     keys = [pre_input, settings_text, ','.join(libraries)]
     shortkey = jcache.get_shortkey(keys)
-    if DEBUG_CACHE: print >>sys.stderr, 'shortkey', shortkey
+    if DEBUG_CACHE: logmsg('shortkey', shortkey)
 
     out = jcache.get(shortkey, keys)
 
@@ -181,21 +187,21 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
       dfp.write("\n\n========================== libraries\n\n")
       dfp.write("\n".join(libraries))
       dfp.close()
-      print >>sys.stderr, '  cache miss, key data dumped to %s' % dfpath
+      logmsg('  cache miss, key data dumped to %s' % dfpath)
 
-    if out and DEBUG: print >> sys.stderr, '  loading pre from jcache'
+    if out and DEBUG: logmsg('  loading pre from jcache')
   if not out:
     open(pre_file, 'w').write(pre_input)
     out = jsrun.run_js(compiler, compiler_engine, [settings_file, pre_file, 'pre'] + libraries, stdout=subprocess.PIPE, stderr=STDERR_FILE,
                        cwd=path_from_root('src'))
     assert '//FORWARDED_DATA:' in out, 'Did not receive forwarded data in pre output - process failed?'
     if jcache:
-      if DEBUG: print >> sys.stderr, '  saving pre to jcache'
+      if DEBUG: logmsg('  saving pre to jcache')
       jcache.set(shortkey, keys, out)
   pre, forwarded_data = out.split('//FORWARDED_DATA:')
   forwarded_file = temp_files.get('.json').name
   open(forwarded_file, 'w').write(forwarded_data)
-  if DEBUG: print >> sys.stderr, '  emscript: phase 1 took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: phase 1 took %s seconds' % (time.time() - t))
 
   indexed_functions = set()
   forwarded_json = json.loads(forwarded_data)
@@ -238,7 +244,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
       return True
     chunks = filter(load_from_cache, chunks)
     if len(cached_outputs) > 0:
-      if out and DEBUG: print >> sys.stderr, '  loading %d funcchunks from jcache' % len(cached_outputs)
+      if out and DEBUG: logmsg('  loading %d funcchunks from jcache' % len(cached_outputs))
     else:
       cached_outputs = []
 
@@ -248,7 +254,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
     if cores == 1 and total_ll_size < MAX_CHUNK_SIZE:
       assert len(chunks) == 1, 'no point in splitting up without multiple cores'
 
-    if DEBUG: print >> sys.stderr, '  emscript: phase 2 working on %d chunks %s (intended chunk size: %.2f MB, meta: %.2f MB, forwarded: %.2f MB, total: %.2f MB)' % (len(chunks), ('using %d cores' % cores) if len(chunks) > 1 else '', chunk_size/(1024*1024.), len(meta)/(1024*1024.), len(forwarded_data)/(1024*1024.), total_ll_size/(1024*1024.))
+    if DEBUG: logmsg('  emscript: phase 2 working on %d chunks %s (intended chunk size: %.2f MB, meta: %.2f MB, forwarded: %.2f MB, total: %.2f MB)' % (len(chunks), ('using %d cores' % cores) if len(chunks) > 1 else '', chunk_size/(1024*1024.), len(meta)/(1024*1024.), len(forwarded_data)/(1024*1024.), total_ll_size/(1024*1024.)))
 
     commands = [
       (i, chunk, meta, settings_file, compiler, forwarded_file, libraries, compiler_engine, temp_files, DEBUG)
@@ -273,7 +279,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
       keys = [settings_text, forwarded_data, chunk]
       shortkey = jcache.get_shortkey(keys)
       jcache.set(shortkey, keys, outputs[i])
-    if out and DEBUG and len(chunks) > 0: print >> sys.stderr, '  saving %d funcchunks to jcache' % len(chunks)
+    if out and DEBUG and len(chunks) > 0: logmsg('  saving %d funcchunks to jcache' % len(chunks))
 
   chunks = None
 
@@ -283,7 +289,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   for output in outputs:
     assert len(output) == 2, 'Did not receive forwarded data in an output - process failed? We only got: ' + output[0][-3000:]
 
-  if DEBUG: print >> sys.stderr, '  emscript: phase 2 took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: phase 2 took %s seconds' % (time.time() - t))
   if DEBUG: t = time.time()
 
   # merge forwarded data
@@ -319,7 +325,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   funcs_js = [output[0] for output in outputs]
 
   outputs = None
-  if DEBUG: print >> sys.stderr, '  emscript: phase 2b took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: phase 2b took %s seconds' % (time.time() - t))
   if DEBUG: t = time.time()
 
   # calculations on merged forwarded data
@@ -340,7 +346,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
     else:
       curr = i
       i += 2
-    #print >> sys.stderr, 'function indexing', indexed, curr, sig
+    #logmsg('function indexing', indexed, curr, sig)
     forwarded_json['Functions']['indexedFunctions'][indexed] = curr # make sure not to modify this python object later - we use it in indexize
 
   def split_32(x):
@@ -378,7 +384,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
   forwarded_data = json.dumps(forwarded_json)
   forwarded_file = temp_files.get('.2.json').name
   open(forwarded_file, 'w').write(indexize(forwarded_data))
-  if DEBUG: print >> sys.stderr, '  emscript: phase 2c took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: phase 2c took %s seconds' % (time.time() - t))
 
   # Phase 3 - post
   if DEBUG: t = time.time()
@@ -539,7 +545,7 @@ def emscript(infile, settings, outfile, libraries=[], compiler_engine=None,
 
     # finalize
 
-    if DEBUG: print >> sys.stderr, 'asm text sizes', map(len, funcs_js), len(asm_setup), len(asm_global_vars), len(asm_global_funcs), len(pre_tables), len('\n'.join(function_tables_impls)), len(function_tables_defs.replace('\n', '\n  ')), len(exports), len(the_global), len(sending), len(receiving)
+    if DEBUG: logmsg('asm text sizes', map(len, funcs_js), len(asm_setup), len(asm_global_vars), len(asm_global_funcs), len(pre_tables), len('\n'.join(function_tables_impls)), len(function_tables_defs.replace('\n', '\n  ')), len(exports), len(the_global), len(sending), len(receiving))
 
     funcs_js = ['''
 %s
@@ -687,7 +693,7 @@ Runtime.stackRestore = function(top) { asm['stackRestore'](top) };
   funcs_js = None
 
   outfile.write(indexize(post))
-  if DEBUG: print >> sys.stderr, '  emscript: phase 3 took %s seconds' % (time.time() - t)
+  if DEBUG: logmsg('  emscript: phase 3 took %s seconds' % (time.time() - t))
 
   outfile.close()
 
@@ -779,11 +785,11 @@ def _main(environ):
   keywords, positional = parser.parse_args()
 
   if not keywords.suppressUsageWarning:
-    print >> sys.stderr, '''
+    logmsg('''
 ==============================================================
 WARNING: You should normally never use this! Use emcc instead.
 ==============================================================
-  '''
+  ''')
 
   if len(positional) != 1:
     raise RuntimeError('Must provide exactly one positional argument. Got ' + str(len(positional)) + ': "' + '", "'.join(positional) + '"')
