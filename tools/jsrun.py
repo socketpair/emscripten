@@ -4,8 +4,8 @@ from subprocess import Popen, PIPE, STDOUT
 # Logs a message to stderr, forcing a flush afterwards to have all messages immediately show up on the console.
 # This is used instead of the logging framework in some places where standard prints are routed via stderr
 # instead of stdout in cases where stdout is reserved for other use, or muted via a PIPEd process call.
-def logmsg(str):
-  print >> sys.stderr, str
+def logmsg(*strings):
+  print >> sys.stderr, ', '.join(strings)
   if os.name == 'nt':
     sys.stderr.flush()
 
