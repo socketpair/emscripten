@@ -1,11 +1,21 @@
 import time, os, sys
 from subprocess import Popen, PIPE, STDOUT
 
+# Converts an arbitrary nested list of lists of lists to a string.
+def flatten_to_string(list_of_lists, delimiter):
+    res = ''
+    if hasattr(list_of_lists, '__iter__'): # Is this item a list or a tuple?
+        for item in list_of_lists:
+            res += str(flatten_to_string(item, delimiter)) + delimiter
+    else:
+        res = str(list_of_lists)
+    return res
+
 # Logs a message to stderr, forcing a flush afterwards to have all messages immediately show up on the console.
 # This is used instead of the logging framework in some places where standard prints are routed via stderr
 # instead of stdout in cases where stdout is reserved for other use, or muted via a PIPEd process call.
 def logmsg(*strings):
-  print >> sys.stderr, ', '.join(strings)
+  print >> sys.stderr, flatten_to_string(strings, ', ')
   if os.name == 'nt':
     sys.stderr.flush()
 
