@@ -8,7 +8,7 @@ stdout = None
 stderr = None
 
 def call_process(cmd):
-  proc = Popen(cmd, stdout=stdout, stderr=stderr)
+  proc = Popen(cmd, stdout=stdout)
   proc.communicate()
   if proc.returncode != 0:
     raise CalledProcessError(proc.returncode, cmd)

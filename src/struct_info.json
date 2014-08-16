@@ -229,6 +229,26 @@
         }
     },
     {
+        "file": "libc/sys/time.h",
+        "defines": [],
+        "structs": {
+            "itimerval": [
+                {
+                    "it_interval": [
+                        "tv_sec",
+                        "tv_nsec"
+                    ]
+                },
+                {
+                    "it_value": [
+                        "tv_sec",
+                        "tv_nsec"
+                    ]
+                }
+            ]
+        }
+    },
+    {
         "defines": [],
         "file": "compat/sys/timeb.h", 
         "structs": {
