@@ -298,6 +298,8 @@ LIBC_SOURCES = [
     'system/lib/libc/musl/src/math/tgamma.c',
     'system/lib/libc/musl/src/math/tgammaf.c',
     'system/lib/libc/musl/src/math/tgammal.c',
+
+    'system/lib/libc/musl/src/signal/sigaction.c',
 ]
 
 LIBCXX_SOURCES = [os.path.join('system/lib/libcxx', x) for x in [
