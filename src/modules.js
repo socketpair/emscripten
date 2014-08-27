@@ -427,6 +427,7 @@ var LibraryManager = {
 
     var libraries = [
       'library.js',
+      'library_syscalls.js'
     ];
     if (!NO_FILESYSTEM) {
       libraries = libraries.concat([

@@ -435,6 +435,13 @@
         "structs": {}
     }, 
     {
+        "file": "libc/bits/syscall.h",
+        "defines": [
+        ],
+        "structs": {
+        }
+    },
+    {
         "file": "libc/sys/socket.h", 
         "defines": [
             "SOCK_DGRAM", 

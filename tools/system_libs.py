@@ -92,6 +92,7 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
        'intscan.c',
        'floatscan.c',
        'shgetc.c',
+       'syscall_ret.c',
       ]],
       ['math', [
        'frexp.c',
