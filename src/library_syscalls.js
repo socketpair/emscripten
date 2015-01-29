@@ -20,6 +20,10 @@ var funs = {
   emulate_SYS_setitimer: function() {
     Module.printErr('SYS_setitimer STUB implementation');
     return 0;
+  },
+
+  emulate_SYS_kill: function(pid, sig) {
+    if (
   }
 
   /*
